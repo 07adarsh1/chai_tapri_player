@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rozha+One&family=Space+Mono:wght@400;700&family=Yatra+One&display=swap" rel="stylesheet">
 
   <!-- Firebase App & Realtime Database SDKs for Real-Time Presence -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -25,6 +25,17 @@
   <style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
     .mono { font-family: 'Space Mono', monospace; }
+    .hindi-font { font-family: 'Rozha One', 'Yatra One', serif, sans-serif; }
+
+    /* Ambient Screen Burst on Lantern Lighting */
+    @keyframes lanternBurst {
+      0% { box-shadow: inset 0 0 0 0 rgba(251, 191, 36, 0.4); }
+      50% { box-shadow: inset 0 0 120px 40px rgba(251, 191, 36, 0.25); }
+      100% { box-shadow: inset 0 0 0 0 rgba(251, 191, 36, 0); }
+    }
+    .screen-glow {
+      animation: lanternBurst 3s ease-out;
+    }
 
     /* Custom range slider thumb */
     input[type="range"] {
@@ -83,6 +94,25 @@
       background: linear-gradient(180deg, rgba(251, 191, 36, 0.9), rgba(245, 158, 11, 0.7));
       border-radius: 999px;
     }
+
+    /* Zen / Focus Mode Styles */
+    body.zen-mode header,
+    body.zen-mode .non-zen {
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transform: translateY(-12px);
+    }
+    header, .non-zen {
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    body.zen-mode main {
+      transform: translateY(8px);
+      opacity: 0.92;
+    }
+    body.zen-mode main:hover {
+      opacity: 1;
+      transform: translateY(0);
+    }
   </style>
 </head>
 <body class="relative h-full text-white flex flex-col justify-between items-center p-4 sm:p-6 select-none overflow-hidden bg-black">
@@ -95,6 +125,7 @@
       loop
       muted
       playsinline
+      style="transition: opacity 0.4s ease-in-out;"
       class="w-full h-full object-cover">
       <source src="bg.mp4" type="video/mp4">
       <source src="bg.webm" type="video/webm">
@@ -104,17 +135,45 @@
   <!-- 2. SOFT VIGNETTE -->
   <div class="fixed inset-0 -z-20 bg-gradient-to-b from-black/50 via-transparent to-black/85 pointer-events-none"></div>
 
-  <!-- 3. TOP STATUS BAR -->
-  <header class="absolute left-4 right-4 top-4 z-20 flex items-center justify-between text-xs">
-    <!-- Real-time Live Counter -->
-    <div class="flex items-center gap-2 bg-neutral-950/75 border border-white/10 px-3.5 py-1.5 rounded-full backdrop-blur-md shadow-lg self-start">
-      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-      <span class="mono text-neutral-200 text-[11px]"><span id="liveCount">1</span> listening right now</span>
+  <!-- 3. TOP STATUS & NAVIGATION BAR -->
+  <header class="absolute left-4 sm:left-6 right-4 sm:right-6 top-4 sm:top-5 z-20 flex items-center justify-between text-xs flex-wrap gap-2">
+    <!-- Brand + Real-time Live Counter Group -->
+    <div class="flex items-center gap-2.5 bg-neutral-950/80 border border-white/10 px-3.5 py-1.5 rounded-full backdrop-blur-xl shadow-2xl">
+      <div class="flex items-center gap-1.5 font-bold tracking-wide text-amber-200">
+        <span>☕</span>
+        <span class="hindi-font text-xs tracking-normal">अपना चाय टपरी</span>
+      </div>
+      <span class="w-1 h-3 bg-white/20 rounded-full"></span>
+      <div class="flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+        <span class="mono text-neutral-300 text-[11px]"><span id="liveCount">1</span> listening</span>
+      </div>
     </div>
 
-    <div class="flex items-center gap-2">
-      <!-- Playlist Button -->
-      <button onclick="toggleDrawer()" class="flex items-center gap-2 bg-neutral-950/75 border border-white/10 px-3.5 py-1.5 rounded-full backdrop-blur-md text-neutral-300 hover:text-white hover:border-white/25 transition text-[11px] mono shadow-lg">
+    <!-- Unified Glass Capsule Dock -->
+    <nav class="flex items-center p-1 bg-neutral-950/80 border border-white/10 rounded-full backdrop-blur-xl shadow-2xl flex-wrap">
+      <!-- ☀️/🌙 Weather Theme Toggle -->
+      <button onclick="toggleDayNightTheme()" id="themeToggleBtn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-neutral-300 hover:text-amber-200 hover:bg-white/5 transition text-[11px] mono active:scale-95" title="Switch Day / Night Weather Background">
+        <span id="themeIcon">☀️</span> <span id="themeLabel">Morning</span>
+      </button>
+
+      <!-- 📸 Story Generator -->
+      <button onclick="generateStoryCard()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-neutral-300 hover:text-amber-200 hover:bg-white/5 transition text-[11px] mono active:scale-95">
+        <span>📸</span> Story
+      </button>
+
+      <!-- 🕯️ Light a Lantern -->
+      <button onclick="toggleLanternModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-amber-300 hover:text-amber-200 hover:bg-amber-400/10 transition text-[11px] mono active:scale-95">
+        <span>🕯️</span> <span id="lanternCountDisplay">Light a Lantern</span>
+      </button>
+
+      <!-- ✍️ Memory Wall -->
+      <button onclick="toggleWallDrawer()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-amber-300 hover:text-amber-200 hover:bg-amber-400/10 transition text-[11px] mono active:scale-95">
+        <span>✍️</span> Wall (<span id="wallCount">0</span>)
+      </button>
+
+      <!-- 📻 Playlist -->
+      <button onclick="toggleDrawer()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-neutral-300 hover:text-white hover:bg-white/5 transition text-[11px] mono active:scale-95">
         <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="8" y1="6" x2="21" y2="6"></line>
           <line x1="8" y1="12" x2="21" y2="12"></line>
@@ -125,22 +184,30 @@
         </svg>
         Playlist (<span id="queueCount">36</span>)
       </button>
-
-      <!-- Memory Wall Trigger -->
-      <button onclick="toggleWallDrawer()" class="flex items-center gap-1.5 bg-neutral-950/75 border border-white/10 px-3 py-1.5 rounded-full backdrop-blur-md text-amber-300 hover:text-amber-200 hover:border-amber-400/30 transition text-[11px] mono shadow-lg active:scale-95">
-        <span>✍️</span> Memory Wall (<span id="wallCount">0</span>)
-      </button>
-    </div>
+    </nav>
   </header>
+
+  <!-- 4. BOTTOM-LEFT FLOATING ATMOSPHERE LOUNGE TRIGGER -->
+  <aside class="fixed bottom-4 sm:bottom-6 left-4 sm:left-6 z-20 non-zen">
+    <button
+      onclick="toggleAtmosphereModal()"
+      id="atmoNavBtn"
+      class="flex items-center gap-2 bg-neutral-950/80 border border-white/10 hover:border-amber-400/40 px-3.5 py-2 rounded-full backdrop-blur-xl shadow-2xl text-neutral-300 hover:text-amber-200 transition text-xs mono active:scale-95 group"
+      title="Ambient Sounds & Sleep Timer">
+      <span class="text-sm">🌧️</span>
+      <span class="font-medium tracking-wide">Atmosphere</span>
+      <span id="atmoActiveDot" class="hidden w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span>
+    </button>
+  </aside>
 
   <!-- Empty center space -->
   <div class="flex-1 pointer-events-none"></div>
 
-  <!-- 4. BOTTOM FLOATING DOCK PLAYER -->
-  <main class="w-full max-w-lg z-10 mb-2">
-    <div class="w-full bg-neutral-950/85 border border-white/15 rounded-3xl p-4 sm:p-5 shadow-[0_20px_50px_rgba(0,0,0,0.9)] backdrop-blur-xl space-y-3.5">
+  <!-- 4. BOTTOM FLOATING DOCK PLAYER (CLEAN MINIMAL AUDIO DOCK) -->
+  <main class="w-full max-w-lg z-10 mb-4 sm:mb-6">
+    <div class="w-full bg-neutral-950/85 border border-white/15 hover:border-amber-400/30 transition-all rounded-3xl p-4 sm:p-5 shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_50px_rgba(251,191,36,0.06)] backdrop-blur-xl space-y-3.5">
       
-      <!-- Track Meta & Waveform -->
+      <!-- Track Meta & Waveform & Quick Actions -->
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-3.5 min-w-0">
           <div class="w-11 h-11 rounded-2xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-300 flex-shrink-0 shadow-inner">
@@ -162,8 +229,8 @@
           </div>
         </div>
 
-        <!-- Live Waveform Equalizer -->
-        <div class="flex items-end gap-1 h-5 flex-shrink-0 px-2" id="eqContainer" style="opacity: 0.3;">
+        <!-- Right: Live Waveform Equalizer -->
+        <div class="flex items-end gap-1 h-5 px-1.5 flex-shrink-0" id="eqContainer" style="opacity: 0.3;">
           <div class="w-1 bg-amber-400 rounded-full eq-bar eq-1" style="animation-play-state: paused;"></div>
           <div class="w-1 bg-amber-400 rounded-full eq-bar eq-2" style="animation-play-state: paused;"></div>
           <div class="w-1 bg-amber-400 rounded-full eq-bar eq-3" style="animation-play-state: paused;"></div>
@@ -183,7 +250,7 @@
         </div>
       </div>
 
-      <!-- Playback & Fixed Volume Controls Row -->
+      <!-- Playback Controls Row (Pure, uncluttered audio player) -->
       <div class="flex items-center justify-between pt-1">
         
         <!-- Left: Shuffle & Loop -->
@@ -209,14 +276,14 @@
         
         <!-- Center: Skip & Main Play Button -->
         <div class="flex items-center gap-4">
-          <button onclick="prevTrack()" class="p-2 text-neutral-300 hover:text-white transition active:scale-90" title="Previous">
+          <button onclick="prevTrack()" class="p-2 text-neutral-300 hover:text-white transition active:scale-90" title="Previous (Key: ←)">
             <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
               <polygon points="19 20 9 12 19 4 19 20"></polygon>
               <line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line>
             </svg>
           </button>
           
-          <button id="masterPlayBtn" onclick="togglePlay()" class="w-12 h-12 bg-[#FFF8E7] text-neutral-950 rounded-2xl flex items-center justify-center hover:scale-105 transition shadow-lg shadow-amber-400/20 active:scale-95">
+          <button id="masterPlayBtn" onclick="togglePlay()" class="w-12 h-12 bg-[#FFF8E7] text-neutral-950 rounded-2xl flex items-center justify-center hover:scale-105 transition shadow-lg shadow-amber-400/20 active:scale-95" title="Play/Pause (Key: Space)">
             <span id="playIconContainer">
               <svg class="w-5 h-5 fill-current translate-x-0.5" viewBox="0 0 24 24">
                 <polygon points="6 3 20 12 6 21 6 3"></polygon>
@@ -224,7 +291,7 @@
             </span>
           </button>
 
-          <button onclick="nextTrack()" class="p-2 text-neutral-300 hover:text-white transition active:scale-90" title="Next">
+          <button onclick="nextTrack()" class="p-2 text-neutral-300 hover:text-white transition active:scale-90" title="Next (Key: →)">
             <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
               <polygon points="5 4 15 12 5 20 5 4"></polygon>
               <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line>
@@ -232,9 +299,9 @@
           </button>
         </div>
 
-        <!-- Right: FIXED VOLUME CONTROLLER (Stays open smoothly on hover & drag) -->
+        <!-- Right: Fixed Volume Controller -->
         <div class="relative flex items-center group bg-white/5 border border-white/10 rounded-2xl px-2 py-1 transition-all duration-200">
-          <button onclick="toggleMute()" id="volBtn" class="p-1 text-neutral-400 group-hover:text-white hover:text-amber-300 transition flex-shrink-0" title="Mute/Unmute">
+          <button onclick="toggleMute()" id="volBtn" class="p-1 text-neutral-400 group-hover:text-white hover:text-amber-300 transition flex-shrink-0" title="Mute/Unmute (Key: M)">
             <svg id="volIcon" class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
               <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
@@ -242,7 +309,7 @@
             </svg>
           </button>
 
-          <!-- Smooth slider container (accessible via hover AND click/drag focus) -->
+          <!-- Smooth slider container -->
           <div class="w-0 opacity-0 group-hover:w-16 group-hover:opacity-100 group-focus-within:w-16 group-focus-within:opacity-100 transition-all duration-300 ease-out flex items-center pl-1.5 overflow-hidden">
             <input
               type="range"
@@ -260,12 +327,10 @@
     </div>
 
     <!-- Micro Footer Note -->
-    <div class="text-center text-[11px] text-neutral-400/80 mt-2 flex justify-center gap-3">
-      <span>यहाँ चाय, दोस्ती और किस्से मिलते हैं</span>
-      <span>·</span>
-      <button onclick="copyShareLink()" class="hover:text-amber-300 underline transition">Share Link</button>
-      <span>·</span>
-      <button onclick="shareOnX()" class="hover:text-amber-300 underline transition">Post on 𝕏</button>
+    <div class="text-center text-[11px] text-neutral-400/80 mt-2.5 flex items-center justify-center gap-2">
+      <span class="w-1.5 h-1.5 rounded-full bg-amber-400/60"></span>
+      <span class="italic font-light">यहाँ चाय, दोस्ती और किस्से मिलते हैं</span>
+      <span class="w-1.5 h-1.5 rounded-full bg-amber-400/60"></span>
     </div>
   </main>
 
@@ -327,6 +392,199 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- 1. 🕯️ LIGHT A LANTERN MODAL -->
+  <div id="lanternModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-neutral-900/95 border border-amber-400/20 rounded-3xl p-5 sm:p-6 space-y-4 shadow-[0_0_50px_rgba(251,191,36,0.15)] flex flex-col">
+      
+      <div class="flex justify-between items-center pb-2 border-b border-white/10">
+        <div>
+          <h3 class="font-bold text-base text-amber-200 flex items-center gap-2">
+            🕯️ Light a Lantern at the Tapri
+          </h3>
+          <p class="text-[11px] text-neutral-400">Dedicated to someone special, an old memory, or peaceful moments.</p>
+        </div>
+        <button onclick="toggleLanternModal()" class="text-neutral-400 hover:text-white text-xs mono p-1">✕ Close</button>
+      </div>
+
+      <!-- Live Lantern Feed -->
+      <div class="scroll-panel overflow-y-auto space-y-2 max-h-48 pr-1" id="lanternFeed">
+        <div class="text-center text-xs text-neutral-500 py-4 animate-pulse">Lighting lanterns...</div>
+      </div>
+
+      <!-- Dedication Form -->
+      <form onsubmit="postLantern(event)" class="pt-2 border-t border-white/10 space-y-2.5">
+        <input
+          type="text"
+          id="lanternDedication"
+          required
+          maxlength="60"
+          placeholder="Dedicated to? (e.g., For Mom / 2018 College Gang)"
+          class="w-full bg-black/50 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-amber-400/50">
+        
+        <div class="flex gap-2">
+          <input
+            type="text"
+            id="lanternAuthor"
+            maxlength="25"
+            placeholder="Your name / city (Optional)"
+            class="flex-1 bg-black/50 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-amber-400/50">
+          
+          <button
+            type="submit"
+            id="lanternSubmitBtn"
+            class="px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-neutral-950 font-bold text-xs rounded-xl transition shadow-lg shadow-amber-400/20 active:scale-95">
+            🔥 Light Lantern
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- 3. LIVE LANTERN TOAST NOTIFICATION -->
+  <div id="lanternToast" class="fixed top-16 left-1/2 -translate-x-1/2 z-40 bg-neutral-900/90 border border-amber-400/40 px-4 py-2 rounded-full backdrop-blur-xl shadow-[0_0_30px_rgba(251,191,36,0.3)] text-xs text-amber-200 mono flex items-center gap-2 transform transition-all duration-500 opacity-0 -translate-y-4 pointer-events-none">
+    <span class="animate-bounce">🏮</span>
+    <span id="toastMessage">Someone lit a lantern</span>
+  </div>
+
+  <!-- 4. 📸 STORY PREVIEW & DOWNLOAD MODAL -->
+  <div id="storyModal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-6">
+    <div class="w-full max-w-sm bg-neutral-900/95 border border-white/15 rounded-3xl p-5 space-y-4 shadow-2xl flex flex-col items-center max-h-[92vh]">
+      
+      <!-- Modal Header -->
+      <div class="w-full flex justify-between items-center pb-2 border-b border-white/10">
+        <div>
+          <h3 class="font-bold text-sm text-amber-200 flex items-center gap-2">
+            📸 Instagram Story Card
+          </h3>
+          <p class="text-[10px] text-neutral-400">9:16 vertical card for Instagram & WhatsApp Stories</p>
+        </div>
+        <button onclick="toggleStoryModal()" class="text-neutral-400 hover:text-white text-xs mono p-1">✕ Close</button>
+      </div>
+
+      <!-- Live Canvas / Preview Image -->
+      <div class="relative w-full aspect-[9/16] max-h-[55vh] rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black flex items-center justify-center">
+        <canvas id="storyCanvas" width="1080" height="1920" class="hidden"></canvas>
+        <img id="storyPreviewImg" class="w-full h-full object-contain" alt="Story Card Preview">
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="w-full flex gap-2 pt-1">
+        <button
+          onclick="downloadStoryImage()"
+          class="flex-1 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-neutral-950 font-bold text-xs rounded-xl transition shadow-lg shadow-amber-400/20 active:scale-95 flex items-center justify-center gap-1.5">
+          <span>💾</span> Save Story
+        </button>
+
+        <button
+          id="nativeShareBtn"
+          onclick="shareNativeStory()"
+          class="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-medium text-xs rounded-xl transition border border-white/10 active:scale-95 flex items-center justify-center gap-1.5">
+          <span>📤</span> Share
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 5. 🎧 UNIFIED ATMOSPHERE & LOUNGE MODAL -->
+  <div id="atmosphereModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-neutral-900/95 border border-amber-400/20 rounded-3xl p-5 space-y-4 shadow-[0_0_60px_rgba(251,191,36,0.12)] flex flex-col max-h-[90vh] overflow-y-auto scroll-panel">
+      
+      <!-- Modal Header -->
+      <div class="flex justify-between items-center pb-2 border-b border-white/10">
+        <div>
+          <h3 class="font-bold text-sm text-amber-200 flex items-center gap-2">
+            🌧️ Tapri Atmosphere & Lounge
+          </h3>
+          <p class="text-[10px] text-neutral-400">Ambient soundscapes, sleep timer & zen focus</p>
+        </div>
+        <button onclick="toggleAtmosphereModal()" class="text-neutral-400 hover:text-white text-xs mono p-1">✕ Close</button>
+      </div>
+
+      <!-- SECTION 1: 🌧️ AMBIENT SOUND MIXER -->
+      <div class="space-y-2.5">
+        <div class="flex justify-between items-center text-xs font-semibold text-neutral-200">
+          <span class="flex items-center gap-1.5"><span>🎧</span> Ambient Layers</span>
+          <div class="flex gap-1">
+            <button onclick="setAmbientPreset('monsoon')" class="px-2 py-0.5 bg-white/5 hover:bg-white/10 text-[10px] mono text-neutral-300 rounded-lg border border-white/10 transition active:scale-95">🌧️ Monsoon</button>
+            <button onclick="setAmbientPreset('tapri')" class="px-2 py-0.5 bg-white/5 hover:bg-white/10 text-[10px] mono text-neutral-300 rounded-lg border border-white/10 transition active:scale-95">☕ Tapri</button>
+            <button onclick="setAmbientPreset('mute')" class="px-2 py-0.5 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-[10px] mono rounded-lg border border-red-500/20 transition active:scale-95">Mute</button>
+          </div>
+        </div>
+
+        <div class="space-y-2 bg-white/5 p-3 rounded-2xl border border-white/5 text-xs">
+          <!-- 🌧️ Rain on Tin Roof -->
+          <div class="space-y-1">
+            <div class="flex justify-between items-center text-neutral-300">
+              <span class="flex items-center gap-1.5">🌧️ Rain on Tin Roof</span>
+              <span id="rainVolLabel" class="text-[10px] mono text-amber-400">0%</span>
+            </div>
+            <input type="range" id="rainVol" min="0" max="100" value="0" oninput="setAmbientVolume('rain', this.value)" class="w-full h-1.5 bg-white/20 rounded-lg cursor-pointer appearance-none">
+          </div>
+
+          <!-- ☕ Boiling Chai Kettle -->
+          <div class="space-y-1 pt-1 border-t border-white/5">
+            <div class="flex justify-between items-center text-neutral-300">
+              <span class="flex items-center gap-1.5">☕ Simmering Chai Steam</span>
+              <span id="chaiVolLabel" class="text-[10px] mono text-amber-400">0%</span>
+            </div>
+            <input type="range" id="chaiVol" min="0" max="100" value="0" oninput="setAmbientVolume('chai', this.value)" class="w-full h-1.5 bg-white/20 rounded-lg cursor-pointer appearance-none">
+          </div>
+
+          <!-- 📻 Vintage Cassette Tape Hiss -->
+          <div class="space-y-1 pt-1 border-t border-white/5">
+            <div class="flex justify-between items-center text-neutral-300">
+              <span class="flex items-center gap-1.5">📻 Vintage Cassette Hiss</span>
+              <span id="tapeVolLabel" class="text-[10px] mono text-amber-400">0%</span>
+            </div>
+            <input type="range" id="tapeVol" min="0" max="100" value="0" oninput="setAmbientVolume('tape', this.value)" class="w-full h-1.5 bg-white/20 rounded-lg cursor-pointer appearance-none">
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 2: ⏳ BEDTIME SLEEP TIMER -->
+      <div class="space-y-2 pt-1 border-t border-white/10">
+        <div class="flex justify-between items-center text-xs font-semibold text-neutral-200">
+          <span class="flex items-center gap-1.5"><span>⏳</span> Sleep Timer</span>
+          <span id="sleepTimerStatus" class="text-[10px] mono text-amber-400 font-normal">Off</span>
+        </div>
+        <div class="grid grid-cols-4 gap-1.5 text-xs mono">
+          <button onclick="setSleepTimer(15)" class="py-2 rounded-xl bg-white/5 hover:bg-amber-400/20 hover:text-amber-200 border border-white/10 transition active:scale-95 text-center">15m</button>
+          <button onclick="setSleepTimer(30)" class="py-2 rounded-xl bg-white/5 hover:bg-amber-400/20 hover:text-amber-200 border border-white/10 transition active:scale-95 text-center">30m</button>
+          <button onclick="setSleepTimer(45)" class="py-2 rounded-xl bg-white/5 hover:bg-amber-400/20 hover:text-amber-200 border border-white/10 transition active:scale-95 text-center">45m</button>
+          <button onclick="setSleepTimer(60)" class="py-2 rounded-xl bg-white/5 hover:bg-amber-400/20 hover:text-amber-200 border border-white/10 transition active:scale-95 text-center">60m</button>
+        </div>
+        <button onclick="cancelSleepTimer()" class="w-full py-1.5 bg-white/5 hover:bg-red-500/10 text-neutral-400 hover:text-red-300 text-[10px] mono rounded-xl border border-white/10 transition">
+          Turn Off Timer
+        </button>
+      </div>
+
+      <!-- SECTION 3: ☀️ / 🌙 TAPRI WEATHER THEME -->
+      <div class="space-y-2 pt-1 border-t border-white/10">
+        <div class="flex justify-between items-center text-xs font-semibold text-neutral-200">
+          <span class="flex items-center gap-1.5"><span>🌄</span> Background Weather</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs mono">
+          <button onclick="setWeatherTheme('day')" id="themeDayBtn" class="py-2 px-3 rounded-xl bg-white/5 hover:bg-amber-400/20 hover:text-amber-200 border border-white/10 transition active:scale-95 flex items-center justify-center gap-2">
+            <span>☀️</span> Morning Tapri
+          </button>
+          <button onclick="setWeatherTheme('night')" id="themeNightBtn" class="py-2 px-3 rounded-xl bg-white/5 hover:bg-amber-400/20 hover:text-amber-200 border border-white/10 transition active:scale-95 flex items-center justify-center gap-2">
+            <span>🌙</span> Night Tapri
+          </button>
+        </div>
+      </div>
+
+      <!-- SECTION 4: 🌙 FOCUS / FULLSCREEN MODE -->
+      <div class="pt-1 border-t border-white/10">
+        <button onclick="toggleZenMode(); toggleAtmosphereModal();" class="w-full py-2.5 bg-gradient-to-r from-amber-400/15 to-amber-500/15 hover:from-amber-400/25 hover:to-amber-500/25 text-amber-200 border border-amber-400/30 rounded-2xl transition text-xs font-semibold flex items-center justify-center gap-2 active:scale-95">
+          <span>🌙</span> Enter Fullscreen Focus Mode <span class="text-[10px] mono text-neutral-400">(Key: Z)</span>
+        </button>
+      </div>
+
     </div>
   </div>
 
@@ -475,6 +733,63 @@
       return `${Math.floor(h / 24)}d ago`;
     }
 
+    // ================= CONTENT SAFETY & MODERATION =================
+    const VULGAR_PATTERNS = [
+      // English profanity and slurs
+      /\b(fuck|fucker|fucking|f\*ck|fck|fuk|shit|sh\*t|bitch|b\*tch|cunt|c\*nt|dick|pussy|asshole|bastard|slut|whore|nigger|nigga|faggot|retard|porn|porno|nude|nudes|blowjob|dildo|penis|vagina|boobs|tits|rape|rapist)\b/i,
+      // Hindi / Hinglish slurs & gaalis
+      /\b(bhenchod|behenchod|bhenchodd|benchod|mc|bc|madarchod|madharchod|maderchod|chutiya|chutiye|chutiyapa|choot|chut|lauda|lawda|loda|laude|lund|gaand|gand|gandu|gaandu|bhosadi|bhosdike|bhosadiwale|bhosdi|randi|raand|harami|haramkhor|suar|jhant|jhaant|mutth|tatte|chudai|chudwana|gaali)\b/i,
+      // Devanagari slurs
+      /(मादरचोद|बहनचोद|भेनचोद|चूतिया|चूत|गांड|गाण्ड|लंड|लौड़ा|लौडे|भोसड़ी|भोसडीके|रंडी|हरामी|कमीने|झांट|झांत|तट्टे|मुठ)/i
+    ];
+
+    function normalizeTextForSafety(text) {
+      if (!text) return '';
+      let t = text.toLowerCase();
+      // Replace leetspeak numbers and symbols
+      t = t.replace(/@/g, 'a')
+           .replace(/\$/g, 's')
+           .replace(/0/g, 'o')
+           .replace(/1/g, 'i')
+           .replace(/!/g, 'i')
+           .replace(/3/g, 'e')
+           .replace(/5/g, 's')
+           .replace(/\+/g, 't');
+      // Collapse repeated characters (e.g. fuuuuck -> fuck, chuuuutiya -> chutiya)
+      t = t.replace(/(.)\1{2,}/g, '$1$1');
+      return t;
+    }
+
+    function isContentSafe(text) {
+      if (!text) return true;
+      const normalized = normalizeTextForSafety(text);
+      const collapsedNoSpaces = normalized.replace(/[\s\.\-_\*#@]/g, '');
+
+      // Check regex on original, normalized, and space-collapsed versions
+      for (const pattern of VULGAR_PATTERNS) {
+        if (pattern.test(text) || pattern.test(normalized) || pattern.test(collapsedNoSpaces)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function showSafetyAlert(message) {
+      const toast = document.getElementById('lanternToast');
+      const msg = document.getElementById('toastMessage');
+      if (toast && msg) {
+        msg.innerText = message || "Please keep Tapri peaceful & respectful. Inappropriate words are not allowed 🙏";
+        toast.classList.remove('opacity-0', '-translate-y-4');
+        toast.classList.add('opacity-100', 'translate-y-0');
+        setTimeout(() => {
+          toast.classList.remove('opacity-100', 'translate-y-0');
+          toast.classList.add('opacity-0', '-translate-y-4');
+        }, 4500);
+      } else {
+        alert(message || "Please keep Tapri peaceful & respectful. Inappropriate words are not allowed 🙏");
+      }
+    }
+
     function initMemoryWall(dbInstance) {
       if (!dbInstance) return;
 
@@ -488,7 +803,7 @@
           return;
         }
 
-        const messages = Object.values(data).reverse();
+        const messages = Object.values(data).reverse().filter(m => isContentSafe(m.text) && isContentSafe(m.author));
         document.getElementById('wallCount').innerText = messages.length;
 
         feed.innerHTML = messages.map((m) => `
@@ -511,6 +826,11 @@
       const author = authorInput.value.trim() || 'गुमनाम यार';
 
       if (!text) return;
+
+      if (!isContentSafe(text) || !isContentSafe(author)) {
+        showSafetyAlert("कृपया टपरी का माहौल साफ़ रखें। अभद्र शब्दों की अनुमति नहीं है 🙏");
+        return;
+      }
 
       const db = firebase.database();
       const postBtn = document.getElementById('postBtn');
@@ -633,6 +953,9 @@
           if (typeof initMemoryWall === 'function') {
             initMemoryWall(db);
           }
+          if (typeof initLanterns === 'function') {
+            initLanterns(db);
+          }
           return;
         }
       } catch (e) {
@@ -749,6 +1072,7 @@
 
     function nextTrack() {
       resumeBackgroundOnUserAction();
+      playRadioTuningBurst();
 
       if (player && (player.playVideoAt || player.nextVideo)) {
         const nextIndex = isShuffled ? getRandomTrackIndex(currentTrack) : (currentTrack + 1) % playlist.length;
@@ -773,6 +1097,7 @@
 
     function prevTrack() {
       resumeBackgroundOnUserAction();
+      playRadioTuningBurst();
 
       if (player && (player.playVideoAt || player.previousVideo)) {
         const prevIndex = isShuffled ? getRandomTrackIndex(currentTrack) : (currentTrack - 1 + playlist.length) % playlist.length;
@@ -793,6 +1118,7 @@
 
     function selectTrack(idx) {
       resumeBackgroundOnUserAction();
+      playRadioTuningBurst();
       currentTrack = idx;
       if (player && player.playVideoAt) {
         player.playVideoAt(idx);
@@ -856,6 +1182,674 @@
       const text = encodeURIComponent("अपना चाय टपरी ☕📻 - यहाँ चाय, दोस्ती और किस्से मिलते हैं\n\n");
       window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(window.location.href)}`, '_blank');
     }
+
+    // ================= 1. 🕯️ LANTERN LOGIC =================
+    function toggleLanternModal() {
+      document.getElementById('lanternModal').classList.toggle('hidden');
+    }
+
+    function triggerScreenGlow() {
+      document.body.classList.remove('screen-glow');
+      void document.body.offsetWidth; // trigger reflow
+      document.body.classList.add('screen-glow');
+    }
+
+    function showLanternToast(author, dedication) {
+      const toast = document.getElementById('lanternToast');
+      const msg = document.getElementById('toastMessage');
+      if (msg) msg.innerText = `${author} lit a lantern for "${dedication}" 🔥`;
+      
+      if (toast) {
+        toast.classList.remove('opacity-0', '-translate-y-4');
+        toast.classList.add('opacity-100', 'translate-y-0');
+        
+        setTimeout(() => {
+          toast.classList.remove('opacity-100', 'translate-y-0');
+          toast.classList.add('opacity-0', '-translate-y-4');
+        }, 4500);
+      }
+    }
+
+    function initLanterns(db) {
+      if (!db) return;
+      const lanternsRef = db.ref("lanterns");
+
+      // Real-time listener for all lit lanterns
+      lanternsRef.limitToLast(30).on("value", (snap) => {
+        const data = snap.val();
+        const feed = document.getElementById("lanternFeed");
+        const countDisplay = document.getElementById("lanternCountDisplay");
+
+        if (!data) {
+          if (feed) feed.innerHTML = `<div class="text-center text-xs text-neutral-500 py-4">Be the first to light a lantern! 🕯️</div>`;
+          if (countDisplay) countDisplay.innerText = `Light a Lantern`;
+          return;
+        }
+
+        const list = Object.values(data).reverse().filter(item => isContentSafe(item.dedication) && isContentSafe(item.author));
+        if (countDisplay) {
+          countDisplay.innerText = list.length === 1 ? `🏮 1 Lantern Lit` : `🏮 ${list.length} Lanterns Lit`;
+        }
+
+        if (feed) {
+          feed.innerHTML = list.map(item => `
+            <div class="p-2.5 bg-white/5 border border-amber-500/20 rounded-2xl flex justify-between items-center text-xs">
+              <div>
+                <div class="text-amber-300 font-semibold">🔥 ${escapeHtml(item.dedication || '')}</div>
+                <div class="text-[10px] text-neutral-400 mono">Lit by: ${escapeHtml(item.author || 'Anonymous Friend')}</div>
+              </div>
+              <span class="text-[10px] mono text-neutral-500">${timeAgo(item.timestamp)}</span>
+            </div>
+          `).join('');
+        }
+      });
+
+      // Avoid triggering toast on initial bulk load
+      let initialLanternLoaded = false;
+      lanternsRef.limitToLast(1).once("value", () => {
+        setTimeout(() => { initialLanternLoaded = true; }, 1000);
+      });
+
+      // Toast listener for new lanterns in real-time
+      lanternsRef.limitToLast(1).on("child_added", (snap) => {
+        if (!initialLanternLoaded) return;
+        const item = snap.val();
+        if (item && isContentSafe(item.dedication) && isContentSafe(item.author) && item.timestamp && Date.now() - item.timestamp < 15000) {
+          triggerScreenGlow();
+          showLanternToast(item.author || 'A fellow listener', item.dedication);
+        }
+      });
+    }
+
+    function postLantern(e) {
+      e.preventDefault();
+      const dedInput = document.getElementById('lanternDedication');
+      const authInput = document.getElementById('lanternAuthor');
+      const dedication = dedInput.value.trim();
+      const author = authInput.value.trim() || 'Anonymous Friend';
+
+      if (!dedication) return;
+
+      if (!isContentSafe(dedication) || !isContentSafe(author)) {
+        showSafetyAlert("Please keep Tapri kind and respectful. Inappropriate words are not allowed 🙏");
+        return;
+      }
+
+      const btn = document.getElementById('lanternSubmitBtn');
+
+      if (window.firebase && firebase.apps && firebase.apps.length > 0) {
+        btn.disabled = true;
+        btn.innerText = "Lighting up...";
+
+        firebase.database().ref('lanterns').push({
+          dedication: dedication,
+          author: author,
+          timestamp: Date.now()
+        }).then(() => {
+          dedInput.value = '';
+          if (authInput) authInput.value = '';
+          btn.disabled = false;
+          btn.innerText = "🔥 Light Lantern";
+          toggleLanternModal();
+          triggerScreenGlow();
+        }).catch(() => {
+          btn.disabled = false;
+          btn.innerText = "🔥 Light Lantern";
+        });
+      } else {
+        dedInput.value = '';
+        if (authInput) authInput.value = '';
+        toggleLanternModal();
+        triggerScreenGlow();
+        showLanternToast(author, dedication);
+      }
+    }
+
+
+
+    // ================= 📸 CLEAN INSTAGRAM STORY GENERATOR =================
+    function toggleStoryModal() {
+      document.getElementById('storyModal').classList.toggle('hidden');
+    }
+
+    async function generateStoryCard() {
+      const canvas = document.getElementById('storyCanvas');
+      const ctx = canvas.getContext('2d');
+      const previewImg = document.getElementById('storyPreviewImg');
+
+      // Open modal
+      toggleStoryModal();
+
+      // 1. Dimensions: 9:16 Story Format (1080 x 1920)
+      const W = 1080;
+      const H = 1920;
+
+      // 2. Deep Moody Radial Gradient Background
+      const bgGrad = ctx.createRadialGradient(W / 2, H / 2, 100, W / 2, H / 2, 900);
+      bgGrad.addColorStop(0, '#1a1512');
+      bgGrad.addColorStop(0.6, '#0d0a08');
+      bgGrad.addColorStop(1, '#050403');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, W, H);
+
+      // 3. Warm Ambient Light Glow at Top
+      const glowGrad = ctx.createRadialGradient(W / 2, 450, 50, W / 2, 450, 600);
+      glowGrad.addColorStop(0, 'rgba(251, 191, 36, 0.15)');
+      glowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = glowGrad;
+      ctx.fillRect(0, 0, W, H);
+
+      // 4. Top Badge
+      const liveCount = document.getElementById('liveCount') ? document.getElementById('liveCount').innerText : '164';
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.strokeStyle = 'rgba(251, 191, 36, 0.3)';
+      ctx.lineWidth = 2;
+      roundRect(ctx, W / 2 - 200, 110, 400, 60, 30);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 22px "Space Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`● ${liveCount} LISTENING RIGHT NOW`, W / 2, 148);
+      ctx.restore();
+
+      // 5. Vintage Polaroid Card Body
+      const polX = 90;
+      const polY = 220;
+      const polW = 900;
+      const polH = 1120;
+
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+      ctx.shadowBlur = 60;
+      ctx.shadowOffsetY = 30;
+      ctx.fillStyle = '#f8f5ee'; // Off-white polaroid paper
+      roundRect(ctx, polX, polY, polW, polH, 28);
+      ctx.fill();
+      ctx.restore();
+
+      // 6. Draw Live Photo inside Polaroid
+      const photoX = polX + 45;
+      const photoY = polY + 45;
+      const photoW = polW - 90;
+      const photoH = polH - 260;
+
+      ctx.save();
+      roundRect(ctx, photoX, photoY, photoW, photoH, 16);
+      ctx.clip();
+
+      const bgVid = document.getElementById('bgVideo');
+      if (bgVid && bgVid.readyState >= 2) {
+        ctx.drawImage(bgVid, photoX, photoY, photoW, photoH);
+      } else {
+        ctx.fillStyle = '#261b14';
+        ctx.fillRect(photoX, photoY, photoW, photoH);
+      }
+
+      // Soft warm tint overlay on photo
+      const photoWarmth = ctx.createLinearGradient(0, photoY, 0, photoY + photoH);
+      photoWarmth.addColorStop(0, 'rgba(251, 191, 36, 0.05)');
+      photoWarmth.addColorStop(1, 'rgba(0, 0, 0, 0.45)');
+      ctx.fillStyle = photoWarmth;
+      ctx.fillRect(photoX, photoY, photoW, photoH);
+      ctx.restore();
+
+      // 7. Polaroid Bottom Caption: Song Title & Artist
+      const currentSong = playlist[currentTrack] || { title: "Pehla Nasha", artist: "Udit Narayan" };
+
+      ctx.fillStyle = '#171412';
+      ctx.font = 'bold 44px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(truncateText(ctx, currentSong.title, 580), polX + 50, polY + polH - 140);
+
+      ctx.fillStyle = '#6b5e52';
+      ctx.font = '30px "Space Mono", monospace';
+      ctx.fillText(truncateText(ctx, currentSong.artist, 580), polX + 50, polY + polH - 85);
+
+      // Equalizer Bars icon in polaroid
+      ctx.fillStyle = '#d97706';
+      roundRect(ctx, polX + polW - 130, polY + polH - 160, 10, 45, 5); ctx.fill();
+      roundRect(ctx, polX + polW - 110, polY + polH - 180, 10, 65, 5); ctx.fill();
+      roundRect(ctx, polX + polW - 90, polY + polH - 145, 10, 30, 5); ctx.fill();
+      roundRect(ctx, polX + polW - 70, polY + polH - 165, 10, 50, 5); ctx.fill();
+
+      // 8. Hindi Branding & Tagline Below Polaroid
+      ctx.fillStyle = '#fff8e7';
+      ctx.font = 'bold 64px "Rozha One", serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('अपना चाय टपरी', W / 2, 1490);
+
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'italic 34px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('"यहाँ चाय, दोस्ती और किस्से मिलते हैं"', W / 2, 1560);
+
+      // 9. Clean Website Watermark
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, W / 2 - 280, 1680, 560, 70, 35);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#d4d4d4';
+      ctx.font = '24px "Space Mono", monospace';
+      ctx.fillText('chai-tapri-player.vercel.app', W / 2, 1724);
+      ctx.restore();
+
+      // Render to image preview
+      previewImg.src = canvas.toDataURL('image/png');
+    }
+
+    // Helpers
+    function roundRect(ctx, x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    }
+
+    function truncateText(ctx, text, maxWidth) {
+      if (ctx.measureText(text).width <= maxWidth) return text;
+      while (ctx.measureText(text + '...').width > maxWidth && text.length > 0) {
+        text = text.slice(0, -1);
+      }
+      return text + '...';
+    }
+
+    function downloadStoryImage() {
+      const canvas = document.getElementById('storyCanvas');
+      const link = document.createElement('a');
+      link.download = `chai-tapri-story-${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    async function shareNativeStory() {
+      const canvas = document.getElementById('storyCanvas');
+      canvas.toBlob(async (blob) => {
+        const file = new File([blob], 'chai-tapri-story.png', { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: 'अपना चाय टपरी',
+              text: 'Listening to 90s radio at Chai Tapri ☕📻'
+            });
+          } catch (err) {}
+        } else {
+          downloadStoryImage();
+        }
+      });
+    }
+
+    // ================= 7. 🎧 AMBIENT SOUND MIXER (Web Audio API Synthesizer) =================
+    let audioCtx = null;
+    let rainGain = null, chaiGain = null, tapeGain = null;
+    let rainSource = null, chaiSource = null, tapeSource = null;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtxClass) {
+          audioCtx = new AudioCtxClass();
+        }
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function createPinkNoiseBuffer(ctx, duration = 4) {
+      const bufferSize = ctx.sampleRate * duration;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.96900 * b2 + white * 0.1538520;
+        b3 = 0.86650 * b3 + white * 0.3104856;
+        b4 = 0.55000 * b4 + white * 0.5329522;
+        b5 = -0.7616 * b5 - white * 0.0168980;
+        data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+        b6 = white * 0.115926;
+      }
+      return buffer;
+    }
+
+    function initAmbientAudio() {
+      const ctx = getAudioContext();
+      if (!ctx || rainGain) return;
+
+      const pinkBuffer = createPinkNoiseBuffer(ctx);
+
+      // 1. Rain Synthesizer: Pink noise with bandpass filtering
+      rainSource = ctx.createBufferSource();
+      rainSource.buffer = pinkBuffer;
+      rainSource.loop = true;
+      const rainFilter = ctx.createBiquadFilter();
+      rainFilter.type = 'lowpass';
+      rainFilter.frequency.value = 1400;
+      rainGain = ctx.createGain();
+      rainGain.gain.value = 0;
+      rainSource.connect(rainFilter);
+      rainFilter.connect(rainGain);
+      rainGain.connect(ctx.destination);
+      rainSource.start(0);
+
+      // 2. Boiling Chai / Steam Hiss: Lowpass + Resonant notch
+      chaiSource = ctx.createBufferSource();
+      chaiSource.buffer = pinkBuffer;
+      chaiSource.loop = true;
+      const chaiFilter = ctx.createBiquadFilter();
+      chaiFilter.type = 'bandpass';
+      chaiFilter.frequency.value = 480;
+      chaiFilter.Q.value = 1.8;
+      chaiGain = ctx.createGain();
+      chaiGain.gain.value = 0;
+      chaiSource.connect(chaiFilter);
+      chaiFilter.connect(chaiGain);
+      chaiGain.connect(ctx.destination);
+      chaiSource.start(0);
+
+      // 3. Vintage Tape Hiss
+      tapeSource = ctx.createBufferSource();
+      tapeSource.buffer = pinkBuffer;
+      tapeSource.loop = true;
+      const tapeFilter = ctx.createBiquadFilter();
+      tapeFilter.type = 'highpass';
+      tapeFilter.frequency.value = 3500;
+      tapeGain = ctx.createGain();
+      tapeGain.gain.value = 0;
+      tapeSource.connect(tapeFilter);
+      tapeFilter.connect(tapeGain);
+      tapeGain.connect(ctx.destination);
+      tapeSource.start(0);
+    }
+
+    function toggleAtmosphereModal() {
+      document.getElementById('atmosphereModal').classList.toggle('hidden');
+    }
+
+    function setAmbientVolume(type, val) {
+      initAmbientAudio();
+      getAudioContext();
+      const numVal = parseInt(val, 10) / 100;
+
+      if (type === 'rain') {
+        if (rainGain) rainGain.gain.setTargetAtTime(numVal * 0.6, audioCtx.currentTime, 0.05);
+        document.getElementById('rainVolLabel').innerText = `${val}%`;
+      } else if (type === 'chai') {
+        if (chaiGain) chaiGain.gain.setTargetAtTime(numVal * 0.45, audioCtx.currentTime, 0.05);
+        document.getElementById('chaiVolLabel').innerText = `${val}%`;
+      } else if (type === 'tape') {
+        if (tapeGain) tapeGain.gain.setTargetAtTime(numVal * 0.25, audioCtx.currentTime, 0.05);
+        document.getElementById('tapeVolLabel').innerText = `${val}%`;
+      }
+
+      updateAmbientIndicator();
+    }
+
+    function setAmbientPreset(preset) {
+      initAmbientAudio();
+      getAudioContext();
+      const rain = document.getElementById('rainVol');
+      const chai = document.getElementById('chaiVol');
+      const tape = document.getElementById('tapeVol');
+
+      if (preset === 'monsoon') {
+        rain.value = 75; chai.value = 20; tape.value = 30;
+      } else if (preset === 'tapri') {
+        rain.value = 35; chai.value = 65; tape.value = 45;
+      } else if (preset === 'mute') {
+        rain.value = 0; chai.value = 0; tape.value = 0;
+      }
+
+      setAmbientVolume('rain', rain.value);
+      setAmbientVolume('chai', chai.value);
+      setAmbientVolume('tape', tape.value);
+    }
+
+    function updateAmbientIndicator() {
+      const rain = parseInt(document.getElementById('rainVol')?.value || 0, 10);
+      const chai = parseInt(document.getElementById('chaiVol')?.value || 0, 10);
+      const tape = parseInt(document.getElementById('tapeVol')?.value || 0, 10);
+      const activeDot = document.getElementById('atmoActiveDot');
+      const navBtn = document.getElementById('atmoNavBtn');
+
+      if (rain > 0 || chai > 0 || tape > 0 || sleepTargetTime) {
+        activeDot?.classList.remove('hidden');
+        navBtn?.classList.add('text-amber-400');
+        navBtn?.classList.remove('text-neutral-300');
+      } else {
+        activeDot?.classList.add('hidden');
+        navBtn?.classList.remove('text-amber-400');
+        navBtn?.classList.add('text-neutral-300');
+      }
+    }
+
+    // ================= 8. 📻 ANALOG RADIO TUNING SOUND EFFECT =================
+    function playRadioTuningBurst() {
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        const noise = ctx.createBufferSource();
+        noise.buffer = createPinkNoiseBuffer(ctx, 0.35);
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(400, now);
+        filter.frequency.exponentialRampToValueAtTime(1600, now + 0.12);
+        filter.frequency.exponentialRampToValueAtTime(500, now + 0.28);
+        filter.Q.value = 4;
+
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.01, now);
+        gain.gain.linearRampToValueAtTime(0.12, now + 0.05);
+        gain.gain.linearRampToValueAtTime(0.001, now + 0.28);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        noise.start(now);
+        noise.stop(now + 0.3);
+      } catch (e) {}
+    }
+
+    // ================= 9. ⏳ BEDTIME SLEEP TIMER =================
+    let sleepTimerInterval = null;
+    let sleepTargetTime = null;
+
+    function setSleepTimer(minutes) {
+      cancelSleepTimer();
+      sleepTargetTime = Date.now() + minutes * 60 * 1000;
+      updateSleepBadge(minutes * 60);
+
+      sleepTimerInterval = setInterval(() => {
+        const remaining = Math.max(0, Math.floor((sleepTargetTime - Date.now()) / 1000));
+        if (remaining <= 0) {
+          cancelSleepTimer();
+          if (player && player.pauseVideo) {
+            player.pauseVideo();
+          }
+          setAmbientPreset('mute');
+          showSafetyAlert("😴 Sleep Timer finished. Goodnight!");
+          return;
+        }
+
+        // When 10s left, gradually lower volume
+        if (remaining <= 10 && player && player.setVolume) {
+          const fadeVol = Math.floor((remaining / 10) * previousVolume);
+          player.setVolume(fadeVol);
+        }
+
+        updateSleepBadge(remaining);
+      }, 1000);
+
+      showSafetyAlert(`⏳ Sleep timer set for ${minutes} minutes`);
+    }
+
+    function updateSleepBadge(remainingSec) {
+      const status = document.getElementById('sleepTimerStatus');
+      if (!sleepTargetTime || remainingSec === undefined) {
+        if (status) status.innerText = 'Off';
+        updateAmbientIndicator();
+        return;
+      }
+      const mins = Math.floor(remainingSec / 60);
+      const secs = remainingSec % 60;
+      if (status) status.innerText = `${mins}:${secs < 10 ? '0' : ''}${secs} left`;
+      updateAmbientIndicator();
+    }
+
+    function cancelSleepTimer() {
+      if (sleepTimerInterval) clearInterval(sleepTimerInterval);
+      sleepTimerInterval = null;
+      sleepTargetTime = null;
+      updateSleepBadge();
+    }
+
+    // ================= 10. 🌙 FOCUS / ZEN CINEMA MODE (With Fullscreen) =================
+    function toggleZenMode() {
+      const willBeZen = !document.body.classList.contains('zen-mode');
+
+      if (willBeZen) {
+        document.body.classList.add('zen-mode');
+        showSafetyAlert("🌙 Fullscreen Focus Mode. Press 'Z' or 'Esc' to exit.");
+
+        // Request Browser Fullscreen
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+          elem.requestFullscreen().catch(() => {});
+        } else if (elem.webkitRequestFullscreen) {
+          elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) {
+          elem.msRequestFullscreen();
+        }
+      } else {
+        document.body.classList.remove('zen-mode');
+
+        // Exit Browser Fullscreen
+        if (document.fullscreenElement || document.webkitFullscreenElement) {
+          if (document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
+        }
+      }
+    }
+
+    // Keep Zen mode state in sync if user exits fullscreen via browser Escape or F11
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && document.body.classList.contains('zen-mode')) {
+        document.body.classList.remove('zen-mode');
+      }
+    });
+    document.addEventListener('webkitfullscreenchange', () => {
+      if (!document.webkitFullscreenElement && document.body.classList.contains('zen-mode')) {
+        document.body.classList.remove('zen-mode');
+      }
+    });
+
+    // ================= 11. ☀️ / 🌙 DAY-NIGHT WEATHER THEME =================
+    let currentTheme = localStorage.getItem('chai_tapri_theme') || 'night';
+
+    function applyWeatherTheme(theme, showToast = false) {
+      currentTheme = theme;
+      localStorage.setItem('chai_tapri_theme', theme);
+      const bgVid = document.getElementById('bgVideo');
+      const themeIcon = document.getElementById('themeIcon');
+      const themeLabel = document.getElementById('themeLabel');
+      const themeDayBtn = document.getElementById('themeDayBtn');
+      const themeNightBtn = document.getElementById('themeNightBtn');
+
+      const isDay = theme === 'day';
+      const targetSrc = isDay ? 'bg1.mp4' : 'bg.mp4';
+
+      if (themeIcon) themeIcon.innerText = isDay ? '🌙' : '☀️';
+      if (themeLabel) themeLabel.innerText = isDay ? 'Night' : 'Morning';
+
+      if (themeDayBtn && themeNightBtn) {
+        if (isDay) {
+          themeDayBtn.classList.add('bg-amber-400/20', 'text-amber-200', 'border-amber-400/40');
+          themeNightBtn.classList.remove('bg-amber-400/20', 'text-amber-200', 'border-amber-400/40');
+        } else {
+          themeNightBtn.classList.add('bg-amber-400/20', 'text-amber-200', 'border-amber-400/40');
+          themeDayBtn.classList.remove('bg-amber-400/20', 'text-amber-200', 'border-amber-400/40');
+        }
+      }
+
+      if (bgVid) {
+        bgVid.style.opacity = '0';
+        setTimeout(() => {
+          bgVid.src = targetSrc;
+          bgVid.load();
+          bgVid.play().catch(() => {});
+          bgVid.style.opacity = '1';
+        }, 220);
+      }
+
+      if (showToast) {
+        showSafetyAlert(isDay ? "☀️ Switched to Morning Tapri" : "🌙 Switched to Night Tapri");
+      }
+    }
+
+    function toggleDayNightTheme() {
+      const nextTheme = currentTheme === 'day' ? 'night' : 'day';
+      applyWeatherTheme(nextTheme, true);
+    }
+
+    function setWeatherTheme(theme) {
+      applyWeatherTheme(theme, true);
+    }
+
+    // Auto-apply saved or default theme
+    applyWeatherTheme(currentTheme, false);
+
+    // ================= 12. 🎹 POWER USER KEYBOARD SHORTCUTS =================
+    window.addEventListener('keydown', (e) => {
+      // Avoid hotkeys when typing in input or textarea
+      const tag = e.target.tagName.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.code === 'ArrowRight' || e.key === 'l' || e.key === 'L') {
+        e.preventDefault();
+        nextTrack();
+      } else if (e.code === 'ArrowLeft' || e.key === 'j' || e.key === 'J') {
+        e.preventDefault();
+        prevTrack();
+      } else if (e.key === 'm' || e.key === 'M') {
+        toggleMute();
+      } else if (e.key === 'z' || e.key === 'Z') {
+        toggleZenMode();
+      } else if (e.key === 'Escape') {
+        if (document.body.classList.contains('zen-mode')) {
+          toggleZenMode();
+        }
+        document.getElementById('atmosphereModal')?.classList.add('hidden');
+        document.getElementById('lanternModal')?.classList.add('hidden');
+        document.getElementById('storyModal')?.classList.add('hidden');
+        document.getElementById('wallDrawer')?.classList.add('hidden');
+        document.getElementById('queueDrawer')?.classList.add('hidden');
+      }
+    });
   </script>
 </body>
 </html>
