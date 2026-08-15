@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="hi" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>अपना चाय टपरी · यहाँ चाय, दोस्ती और किस्से मिलते हैं</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .mono { font-family: 'Space Mono', monospace; }
+
+    /* Custom range slider thumb */
+    input[type="range"] {
+      accent-color: #fbbf24;
+    }
+
+    .volume-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .volume-wrap .volume-panel {
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: all 0.18s ease;
+    }
+
+    .volume-wrap:hover .volume-panel,
+    .volume-wrap:focus-within .volume-panel,
+    .volume-wrap.is-open .volume-panel {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    /* Equalizer Waveform */
+    @keyframes bounceEq {
+      0%, 100% { height: 3px; }
+      50% { height: 16px; }
+    }
+    .eq-bar { animation: bounceEq 0.7s ease-in-out infinite alternate; }
+    .eq-1 { animation-delay: 0.1s; }
+    .eq-2 { animation-delay: 0.35s; }
+    .eq-3 { animation-delay: 0.15s; }
+    .eq-4 { animation-delay: 0.45s; }
+
+    /* Playlist scrollbar matching the site theme */
+    #playlistItems {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(251, 191, 36, 0.9) rgba(255, 255, 255, 0.05);
+    }
+    #playlistItems::-webkit-scrollbar {
+      width: 10px;
+    }
+    #playlistItems::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 999px;
+    }
+    #playlistItems::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(251,191,36,0.95), rgba(217,119,6,0.9));
+      border-radius: 999px;
+      border: 2px solid rgba(15, 23, 42, 0.9);
+    }
+    #playlistItems::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, rgba(252,211,77,1), rgba(245,158,11,0.95));
+    }
+  </style>
+</head>
+<body class="relative h-full text-white flex flex-col justify-between items-center p-4 sm:p-6 select-none overflow-hidden bg-black">
+
+  <!-- 1. ORIGINAL FULLSCREEN AUTOPLAY VIDEO BACKGROUND -->
+  <div class="fixed inset-0 -z-30 overflow-hidden">
+    <video
+      id="bgVideo"
+      autoplay
+      loop
+      muted
+      playsinline
+      class="w-full h-full object-cover">
+      <source src="bg.mp4" type="video/mp4">
+      <source src="bg.webm" type="video/webm">
+    </video>
+  </div>
+
+  <!-- 2. SOFT VIGNETTE -->
+  <div class="fixed inset-0 -z-20 bg-gradient-to-b from-black/50 via-transparent to-black/85 pointer-events-none"></div>
+
+  <!-- 3. TOP STATUS BAR -->
+  <header class="w-full max-w-5xl flex justify-between items-center text-xs z-10 pt-1">
+    <div class="flex items-center gap-2 bg-neutral-950/75 border border-white/10 px-3.5 py-1.5 rounded-full backdrop-blur-md shadow-lg">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+      <span class="mono text-neutral-200 text-[11px]"><span id="liveCount">164</span> listening right now</span>
+    </div>
+
+    <!-- Playlist Button -->
+    <button onclick="toggleDrawer()" class="flex items-center gap-2 bg-neutral-950/75 border border-white/10 px-3.5 py-1.5 rounded-full backdrop-blur-md text-neutral-300 hover:text-white hover:border-white/25 transition text-[11px] mono shadow-lg">
+      <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="8" y1="6" x2="21" y2="6"></line>
+        <line x1="8" y1="12" x2="21" y2="12"></line>
+        <line x1="8" y1="18" x2="21" y2="18"></line>
+        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+      </svg>
+      Playlist (<span id="queueCount">36</span>)
+    </button>
+  </header>
+
+  <!-- Empty center space so video background remains unobstructed -->
+  <div class="flex-1 pointer-events-none"></div>
+
+  <!-- 4. BOTTOM FLOATING DOCK PLAYER -->
+  <main class="w-full max-w-lg z-10 mb-2">
+    <div class="w-full bg-neutral-950/85 border border-white/15 rounded-3xl p-4 sm:p-5 shadow-[0_20px_50px_rgba(0,0,0,0.9)] backdrop-blur-xl space-y-3.5">
+      
+      <!-- Track Meta & Waveform -->
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3.5 min-w-0">
+          <div class="w-11 h-11 rounded-2xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-300 flex-shrink-0 shadow-inner">
+            <svg class="w-5 h-5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 8h1a4 4 0 1 1 0 8h-1"></path>
+              <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"></path>
+              <line x1="6" y1="2" x2="6" y2="4"></line>
+              <line x1="10" y1="2" x2="10" y2="4"></line>
+              <line x1="14" y1="2" x2="14" y2="4"></line>
+            </svg>
+          </div>
+          <div class="min-w-0">
+            <div id="trackTitle" class="text-sm sm:text-base font-semibold text-neutral-100 truncate">
+              Pehla Nasha
+            </div>
+            <div id="trackArtist" class="text-xs text-neutral-400 truncate mt-0.5 mono">
+              Udit Narayan & Sadhana Sargam
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Waveform Equalizer -->
+        <div class="flex items-end gap-1 h-5 flex-shrink-0 px-2" id="eqContainer" style="opacity: 0.3;">
+          <div class="w-1 bg-amber-400 rounded-full eq-bar eq-1" style="animation-play-state: paused;"></div>
+          <div class="w-1 bg-amber-400 rounded-full eq-bar eq-2" style="animation-play-state: paused;"></div>
+          <div class="w-1 bg-amber-400 rounded-full eq-bar eq-3" style="animation-play-state: paused;"></div>
+          <div class="w-1 bg-amber-400 rounded-full eq-bar eq-4" style="animation-play-state: paused;"></div>
+        </div>
+      </div>
+
+      <!-- Scrubbable Progress Bar -->
+      <div class="space-y-1">
+        <div class="w-full bg-white/10 h-1.5 rounded-full overflow-hidden cursor-pointer" onclick="seekTrack(event)" id="progressContainer">
+          <div id="progressBar" class="bg-gradient-to-r from-amber-500 to-amber-300 h-full w-0 transition-all duration-200"></div>
+        </div>
+        <div class="flex justify-between text-[10px] mono text-neutral-400">
+          <span id="currentTime">0:00</span>
+          <span id="playerStatus" class="text-amber-400/80">Click ▶ to Play</span>
+          <span id="totalDuration">0:00</span>
+        </div>
+      </div>
+
+      <!-- Playback & Accessible Volume Controls -->
+      <div class="flex items-center justify-between pt-1">
+        
+        <!-- Left: Shuffle & Loop -->
+        <div class="flex items-center gap-1">
+          <button onclick="toggleShuffle()" id="shuffleBtn" class="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-white/5 transition active:scale-95" title="Shuffle">
+            <svg class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 3h5v5"></path>
+              <path d="M4 20L21 3"></path>
+              <path d="M21 16v5h-5"></path>
+              <path d="M15 15l6 6"></path>
+              <path d="M4 4l5 5"></path>
+            </svg>
+          </button>
+          <button onclick="toggleLoop()" id="loopBtn" class="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-white/5 transition active:scale-95" title="Loop">
+            <svg class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m17 2 4 4-4 4"></path>
+              <path d="M3 11v-1a4 4 0 0 1 4-4h14"></path>
+              <path d="m7 22-4-4 4-4"></path>
+              <path d="M21 13v1a4 4 0 0 1-4 4H3"></path>
+            </svg>
+          </button>
+        </div>
+        
+        <!-- Center: Skip & Main Play Button -->
+        <div class="flex items-center gap-4">
+          <button onclick="prevTrack()" class="p-2 text-neutral-300 hover:text-white transition active:scale-90" title="Previous">
+            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+              <polygon points="19 20 9 12 19 4 19 20"></polygon>
+              <line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line>
+            </svg>
+          </button>
+          
+          <button id="masterPlayBtn" onclick="togglePlay()" class="w-12 h-12 bg-[#FFF8E7] text-neutral-950 rounded-2xl flex items-center justify-center hover:scale-105 transition shadow-lg shadow-amber-400/20 active:scale-95">
+            <span id="playIconContainer">
+              <svg class="w-5 h-5 fill-current translate-x-0.5" viewBox="0 0 24 24">
+                <polygon points="6 3 20 12 6 21 6 3"></polygon>
+              </svg>
+            </span>
+          </button>
+
+          <button onclick="nextTrack()" class="p-2 text-neutral-300 hover:text-white transition active:scale-90" title="Next">
+            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+              <polygon points="5 4 15 12 5 20 5 4"></polygon>
+              <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Right: Volume appears on hover -->
+        <div class="volume-wrap relative flex items-center">
+          <button onclick="toggleMute()" id="volBtn" class="text-neutral-400 hover:text-amber-300 transition p-2 rounded-xl" title="Mute/Unmute">
+            <svg id="volIcon" class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            </svg>
+          </button>
+
+          <div class="volume-panel absolute right-0 bottom-full mb-2 z-20">
+            <div class="bg-neutral-900/95 border border-white/10 rounded-full px-3 py-2 shadow-xl backdrop-blur-md">
+              <input
+                type="range"
+                id="volumeSlider"
+                min="0"
+                max="100"
+                value="80"
+                oninput="changeVolume(this.value)"
+                class="w-20 h-1 bg-white/20 rounded-lg cursor-pointer appearance-none">
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Micro Footer Note -->
+    <div class="text-center text-[11px] text-neutral-400/80 mt-2 flex justify-center gap-3">
+      <span>यहाँ चाय, दोस्ती और किस्से मिलते हैं</span>
+      <span>·</span>
+      <button onclick="copyShareLink()" class="hover:text-amber-300 underline transition">Share Link</button>
+      <span>·</span>
+      <button onclick="shareOnX()" class="hover:text-amber-300 underline transition">Post on 𝕏</button>
+    </div>
+  </main>
+
+  <!-- 5. PLAYLIST MODAL DRAWER -->
+  <div id="queueDrawer" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full max-w-md bg-neutral-900 border border-white/15 rounded-t-3xl sm:rounded-3xl p-5 space-y-4 max-h-[75vh] flex flex-col shadow-2xl">
+      <div class="flex justify-between items-center pb-3 border-b border-white/10">
+        <h3 class="font-bold text-sm text-neutral-100 flex items-center gap-2">
+          📜 टपरी प्लेलिस्ट (<span id="drawerCount">36</span> Songs)
+        </h3>
+        <button onclick="toggleDrawer()" class="text-neutral-400 hover:text-white text-xs mono">✕ Close</button>
+      </div>
+      <div class="overflow-y-auto space-y-1.5 pr-1" id="playlistItems"></div>
+    </div>
+  </div>
+
+  <!-- OFFSCREEN EMBED -->
+  <div style="position: fixed; bottom: -500px; right: -500px; width: 250px; height: 250px; opacity: 0.001; pointer-events: none;">
+    <div id="yt-player"></div>
+  </div>
+
+  <!-- JAVASCRIPT -->
+  <script>
+    if (window.location.protocol !== 'file:') {
+      const ytScript = document.createElement('script');
+      ytScript.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(ytScript);
+    }
+  </script>
+  <script>
+    const playlist = [
+      { id: "lSpst_vJFiw", title: "Pehla Nasha", artist: "Udit Narayan & Sadhana Sargam" },
+      { id: "IAIGnS9BPKs", title: "Ek Ladki Ko Dekha Toh Aisa Laga", artist: "Kumar Sanu" },
+      { id: "DXEoLBayVSs", title: "Do Dil Mil Rahe Hain", artist: "Kumar Sanu" },
+      { id: "6YkDBps3VeQ", title: "Baazigar O Baazigar", artist: "Kumar Sanu & Alka Yagnik" },
+      { id: "Nq2wYlWFucg", title: "Churake Dil Mera", artist: "Kumar Sanu & Alka Yagnik" },
+      { id: "JC7f3EUDaqw", title: "Aankhon Mein Base Ho Tum", artist: "Abhijeet & Alka Yagnik" },
+      { id: "GNTNnp5rk5E", title: "Aane Se Uske Aaye Bahar", artist: "Mohammed Rafi" },
+      { id: "gCNeDWCI0vo", title: "Pal Pal Dil Ke Paas", artist: "Kishore Kumar" },
+      { id: "kBTudm4geMs", title: "Chura Liya Hai Tumne Jo Dil Ko", artist: "Asha Bhosle & Mohd Rafi" },
+      { id: "FxsfVX6B1Mk", title: "Yeh Shaam Mastani", artist: "Kishore Kumar" },
+      { id: "ylYJSBUgaMA", title: "O Saathi Re Tere Bina Bhi Kya Jeena", artist: "Kishore Kumar" },
+      { id: "VWhQ6xspnSc", title: "Kora Kagaz Tha Yeh Man Mera", artist: "Kishore Kumar & Lata Mangeshkar" },
+      { id: "RHUauMcYlX0", title: "O Sanam", artist: "Lucky Ali" },
+      { id: "cb12KmMMDJA", title: "Dooba Dooba", artist: "Silk Route" },
+      { id: "WJxEj_hrpSg", title: "Maeri", artist: "Euphoria" },
+      { id: "euhY-tmg9x8", title: "Aadat", artist: "Jal The Band" },
+      { id: "p7mrjT3ujwI", title: "Gulabi Sharara", artist: "Inder Arya" },
+      { id: "MINfvOX4BzI", title: "Gori Teri Aankhein Kahe", artist: "Lucky Ali" },
+      { id: "yHmPWzkhcZ8", title: "Rimjhim Gire Sawan", artist: "Kishore Kumar" },
+      { id: "p3w1vO9Xv24", title: "Kyon", artist: "Papon & Sunidhi Chauhan" },
+      { id: "VlaCnp1fxI8", title: "Tum Se Hi", artist: "Mohit Chauhan" },
+      { id: "-OfA04BD4GA", title: "Baahon Ke Darmiyan", artist: "Hariharan & Alka Yagnik" },
+      { id: "1odY3IYsNno", title: "Tip Tip Barsa Paani", artist: "Udit Narayan & Alka Yagnik" },
+      { id: "wiTTrVqRVDw", title: "Iktara", artist: "Kavita Seth & Tochi Raina" },
+      { id: "Dfm2rB-nQ9Y", title: "Dekho Na", artist: "Sonu Nigam & Sunidhi Chauhan" },
+      { id: "Qm1Ftz8lVnI", title: "Moh Moh Ke Dhaage", artist: "Papon" },
+      { id: "9itAxq_SGDM", title: "Ab Ke Sawan Mein Jee Dare", artist: "Lata Mangeshkar & Kishore Kumar" },
+      { id: "yFI3wpXy4zA", title: "Saibo", artist: "Shreya Ghoshal & Sachin-Jigar" },
+      { id: "Py5JYZXJvzo", title: "Dheere Dheere Se Meri Zindagi", artist: "Kumar Sanu" },
+      { id: "b4tE5aKhtlg", title: "Nazar Ke Samne Jigar Ke Paas", artist: "Kumar Sanu & Anuradha Paudwal" },
+      { id: "5JDxjsAVaGk", title: "Tujhe Dekha Toh", artist: "Kumar Sanu & Lata Mangeshkar" },
+      { id: "eUmfGPazuEM", title: "Aisi Deewangi Dekhi Nahi Kahi", artist: "Alka Yagnik & Vinod Rathod" },
+      { id: "W8nThq62Vb4", title: "Dil Hai Ke Manta Nahin", artist: "Kumar Sanu & Anuradha Paudwal" },
+      { id: "VLjvS3uflXc", title: "Pardesi Pardesi", artist: "Udit Narayan & Alka Yagnik" },
+      { id: "BfdLKvJBM_c", title: "Chand Chhupa Badal Mein", artist: "Udit Narayan & Alka Yagnik" },
+      { id: "weLXdwVjSxs", title: "Tu Mere Saamne", artist: "Udit Narayan & Lata Mangeshkar" }
+    ];
+
+    let currentTrack = 0;
+    let player;
+    let isPlaying = false;
+    let isLooping = false;
+    let isShuffled = false;
+    let isMuted = false;
+    let previousVolume = 80;
+    let progressInterval;
+
+    document.getElementById('queueCount').innerText = playlist.length;
+    document.getElementById('drawerCount').innerText = playlist.length;
+
+    function renderQueue() {
+      const container = document.getElementById('playlistItems');
+      container.innerHTML = playlist.map((t, idx) => `
+        <div onclick="selectTrack(${idx})" class="p-2.5 rounded-xl border ${idx === currentTrack ? 'bg-amber-500/20 border-amber-400/40 text-amber-200' : 'bg-white/5 border-white/5 text-neutral-300 hover:bg-white/10'} cursor-pointer flex justify-between items-center transition text-xs">
+          <div>
+            <div class="font-medium">${idx + 1}. ${t.title}</div>
+            <div class="text-[11px] text-neutral-400 mt-0.5 mono">${t.artist}</div>
+          </div>
+          <span class="text-xs">${idx === currentTrack ? '●' : ''}</span>
+        </div>
+      `).join('');
+    }
+    renderQueue();
+
+    function toggleDrawer() {
+      document.getElementById('queueDrawer').classList.toggle('hidden');
+    }
+
+    function toggleShuffle() {
+      isShuffled = !isShuffled;
+      const btn = document.getElementById('shuffleBtn');
+      if (isShuffled) {
+        btn.classList.add('text-amber-400', 'bg-amber-400/10');
+        btn.classList.remove('text-neutral-400');
+      } else {
+        btn.classList.remove('text-amber-400', 'bg-amber-400/10');
+        btn.classList.add('text-neutral-400');
+      }
+    }
+
+    function toggleLoop() {
+      isLooping = !isLooping;
+      const btn = document.getElementById('loopBtn');
+      if (isLooping) {
+        btn.classList.add('text-amber-400', 'bg-amber-400/10');
+        btn.classList.remove('text-neutral-400');
+      } else {
+        btn.classList.remove('text-amber-400', 'bg-amber-400/10');
+        btn.classList.add('text-neutral-400');
+      }
+    }
+
+    // Volume Slider & Vector Icons
+    function changeVolume(val) {
+      if (!player || !player.setVolume) return;
+      player.setVolume(val);
+      updateVolumeIcon(val);
+    }
+
+    function updateVolumeIcon(val) {
+      const volIcon = document.getElementById('volIcon');
+      if (val == 0) {
+        isMuted = true;
+        volIcon.innerHTML = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="22" y1="9" x2="16" y2="15"></line><line x1="16" y1="9" x2="22" y2="15"></line>`;
+      } else if (val < 50) {
+        isMuted = false;
+        volIcon.innerHTML = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>`;
+      } else {
+        isMuted = false;
+        volIcon.innerHTML = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>`;
+      }
+    }
+
+    function toggleMute() {
+      if (!player) return;
+      const slider = document.getElementById('volumeSlider');
+      if (isMuted) {
+        player.unMute();
+        player.setVolume(previousVolume);
+        slider.value = previousVolume;
+        updateVolumeIcon(previousVolume);
+        isMuted = false;
+      } else {
+        previousVolume = slider.value || 80;
+        player.mute();
+        slider.value = 0;
+        updateVolumeIcon(0);
+        isMuted = true;
+      }
+    }
+
+    // Live Counter
+    function initListeners() {
+      let count = 164;
+      setInterval(() => {
+        const delta = Math.floor(Math.random() * 5) - 2;
+        count = Math.max(110, count + delta);
+        document.getElementById('liveCount').innerText = count;
+      }, 4000);
+    }
+    initListeners();
+
+    // YouTube API Setup
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('yt-player', {
+        height: '200',
+        width: '200',
+        videoId: playlist[currentTrack].id,
+        playerVars: {
+          playsinline: 1,
+          controls: 0,
+          rel: 0
+        },
+        events: {
+          onReady: () => {
+            document.getElementById('playerStatus').innerText = "Ready";
+            player.setVolume(80);
+            updateUI();
+          },
+          onStateChange: onPlayerStateChange,
+          onError: () => {
+            console.warn("Skipping restricted video...");
+            nextTrack();
+          }
+        }
+      });
+    }
+
+    const volumeWrap = document.querySelector('.volume-wrap');
+    const volumeButton = document.getElementById('volBtn');
+    const volumeSlider = document.getElementById('volumeSlider');
+
+    function setVolumePopover(open) {
+      if (!volumeWrap) return;
+      volumeWrap.classList.toggle('is-open', open);
+    }
+
+    if (volumeWrap) {
+      volumeWrap.addEventListener('mouseenter', () => setVolumePopover(true));
+      volumeWrap.addEventListener('mouseleave', () => setVolumePopover(false));
+    }
+
+    if (volumeButton) {
+      volumeButton.addEventListener('focus', () => setVolumePopover(true));
+      volumeButton.addEventListener('blur', () => setVolumePopover(false));
+    }
+
+    if (volumeSlider) {
+      volumeSlider.addEventListener('pointerdown', () => setVolumePopover(true));
+      volumeSlider.addEventListener('blur', () => setVolumePopover(false));
+    }
+
+    if (window.location.protocol === 'file:') {
+      const status = document.getElementById('playerStatus');
+      if (status) status.innerText = 'Serve via localhost';
+    }
+
+    function updateUI() {
+      const track = playlist[currentTrack];
+      document.getElementById('trackTitle').innerText = track.title;
+      document.getElementById('trackArtist').innerText = track.artist;
+      renderQueue();
+    }
+
+    function togglePlay() {
+      if (!player) return;
+      if (isPlaying) {
+        player.pauseVideo();
+      } else {
+        document.getElementById('playerStatus').innerText = "Connecting...";
+        player.playVideo();
+      }
+    }
+
+    function setEqualizerState(active) {
+      document.getElementById('eqContainer').style.opacity = active ? '1' : '0.3';
+      document.querySelectorAll('.eq-bar').forEach(bar => {
+        bar.style.animationPlayState = active ? 'running' : 'paused';
+      });
+    }
+
+    function onPlayerStateChange(event) {
+      const iconContainer = document.getElementById('playIconContainer');
+      const status = document.getElementById('playerStatus');
+
+      if (event.data === YT.PlayerState.PLAYING) {
+        isPlaying = true;
+        iconContainer.innerHTML = `<svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>`;
+        status.innerText = "Playing";
+        setEqualizerState(true);
+        startProgress();
+      } else if (event.data === YT.PlayerState.BUFFERING) {
+        status.innerText = "Buffering...";
+      } else {
+        isPlaying = false;
+        iconContainer.innerHTML = `<svg class="w-5 h-5 fill-current translate-x-0.5" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>`;
+        status.innerText = "Paused";
+        setEqualizerState(false);
+        clearInterval(progressInterval);
+      }
+
+      if (event.data === YT.PlayerState.ENDED) {
+        if (isLooping) loadTrack();
+        else nextTrack();
+      }
+    }
+
+    function nextTrack() {
+      if (isShuffled) {
+        currentTrack = Math.floor(Math.random() * playlist.length);
+      } else {
+        currentTrack = (currentTrack + 1) % playlist.length;
+      }
+      loadTrack();
+    }
+
+    function prevTrack() {
+      currentTrack = (currentTrack - 1 + playlist.length) % playlist.length;
+      loadTrack();
+    }
+
+    function selectTrack(idx) {
+      currentTrack = idx;
+      loadTrack();
+      toggleDrawer();
+    }
+
+    function loadTrack() {
+      updateUI();
+      if (player && player.loadVideoById) {
+        player.loadVideoById(playlist[currentTrack].id);
+      }
+    }
+
+    function startProgress() {
+      clearInterval(progressInterval);
+      progressInterval = setInterval(() => {
+        if (!player || !player.getDuration) return;
+        const cur = player.getCurrentTime() || 0;
+        const tot = player.getDuration() || 1;
+        document.getElementById('progressBar').style.width = (cur / tot) * 100 + '%';
+        document.getElementById('currentTime').innerText = format(cur);
+        document.getElementById('totalDuration').innerText = format(tot);
+      }, 500);
+    }
+
+    function seekTrack(e) {
+      const rect = document.getElementById('progressContainer').getBoundingClientRect();
+      const percent = (e.clientX - rect.left) / rect.width;
+      if (player && player.getDuration) {
+        player.seekTo(player.getDuration() * percent, true);
+      }
+    }
+
+    function format(s) {
+      if (isNaN(s) || s < 0) return "0:00";
+      s = Math.floor(s);
+      const mins = Math.floor(s / 60);
+      const secs = s % 60;
+      return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }
+
+    function copyShareLink() {
+      navigator.clipboard.writeText(window.location.href);
+      alert("Link copied! Share it with your chai gang ☕");
+    }
+
+    function shareOnX() {
+      const text = encodeURIComponent("अपना चाय टपरी ☕📻 - यहाँ चाय, दोस्ती और किस्से मिलते हैं\n\n");
+      window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(window.location.href)}`, '_blank');
+    }
+  </script>
+</body>
+</html>
