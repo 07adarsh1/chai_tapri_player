@@ -2,7 +2,6 @@
 .env
 .env.local
 .env.*
-firebase-config.js
 firebase-config.json
 
 # OS / editor files

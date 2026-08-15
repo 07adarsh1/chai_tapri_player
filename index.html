@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>अपना चाय टपरी · यहाँ चाय, दोस्ती और किस्से मिलते हैं</title>
+  <meta name="referrer" content="unsafe-url" />
+  <title>Chai Tapri</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
@@ -12,6 +13,14 @@
   <!-- Firebase App & Realtime Database SDKs for Real-Time Presence -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script>
+    window.firebaseConfig = {
+      apiKey: "AIzaSyBiRBuZa7pJRDMh2itgX_OM0RsQMsHlecE",
+      authDomain: "chai-tapri-86c4d.firebaseapp.com",
+      databaseURL: "https://chai-tapri-86c4d-default-rtdb.firebaseio.com",
+      projectId: "chai-tapri-86c4d"
+    };
+  </script>
 
   <style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -32,6 +41,31 @@
     .eq-2 { animation-delay: 0.35s; }
     .eq-3 { animation-delay: 0.15s; }
     .eq-4 { animation-delay: 0.45s; }
+
+    /* Playlist drawer scrollbar to match the site UI */
+    #queueDrawer .scroll-panel {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(251, 191, 36, 0.7) rgba(255,255,255,0.04);
+    }
+
+    #queueDrawer .scroll-panel::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #queueDrawer .scroll-panel::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.04);
+      border-radius: 999px;
+    }
+
+    #queueDrawer .scroll-panel::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(251,191,36,0.9), rgba(245,158,11,0.7));
+      border-radius: 999px;
+      border: 2px solid rgba(0,0,0,0.15);
+    }
+
+    #queueDrawer .scroll-panel::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, rgba(253,224,71,1), rgba(251,191,36,0.9));
+    }
   </style>
 </head>
 <body class="relative h-full text-white flex flex-col justify-between items-center p-4 sm:p-6 select-none overflow-hidden bg-black">
@@ -54,7 +88,7 @@
   <div class="fixed inset-0 -z-20 bg-gradient-to-b from-black/50 via-transparent to-black/85 pointer-events-none"></div>
 
   <!-- 3. TOP STATUS BAR -->
-  <header class="w-full max-w-5xl flex justify-between items-center text-xs z-10 pt-1">
+  <header class="absolute left-4 right-4 top-4 z-20 flex items-center justify-between text-xs">
     <!-- Real-time Live Counter -->
     <div class="flex items-center gap-2 bg-neutral-950/75 border border-white/10 px-3.5 py-1.5 rounded-full backdrop-blur-md shadow-lg self-start">
       <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
@@ -220,7 +254,7 @@
         </h3>
         <button onclick="toggleDrawer()" class="text-neutral-400 hover:text-white text-xs mono">✕ Close</button>
       </div>
-      <div class="overflow-y-auto space-y-1.5 pr-1" id="playlistItems"></div>
+      <div class="scroll-panel overflow-y-auto space-y-1.5 pr-1.5" id="playlistItems"></div>
     </div>
   </div>
 
@@ -282,6 +316,43 @@
     let isMuted = false;
     let previousVolume = 80;
     let progressInterval;
+    const bgVideo = document.getElementById('bgVideo');
+
+    function keepBackgroundPlaying() {
+      if (!bgVideo) return;
+      bgVideo.muted = true;
+      bgVideo.loop = true;
+      bgVideo.playbackRate = 1;
+
+      if (bgVideo.paused) {
+        const tryPlay = () => {
+          bgVideo.play().catch(() => {
+            setTimeout(tryPlay, 250);
+          });
+        };
+        tryPlay();
+      }
+    }
+
+    function resumeBackgroundOnUserAction() {
+      keepBackgroundPlaying();
+    }
+
+    bgVideo?.addEventListener('pause', () => {
+      if (!document.hidden) {
+        keepBackgroundPlaying();
+      }
+    });
+
+    window.addEventListener('pointerdown', resumeBackgroundOnUserAction, { passive: true });
+    window.addEventListener('touchstart', resumeBackgroundOnUserAction, { passive: true });
+    window.addEventListener('keydown', resumeBackgroundOnUserAction, { passive: true });
+
+    setInterval(() => {
+      if (!document.hidden) {
+        keepBackgroundPlaying();
+      }
+    }, 900);
 
     document.getElementById('queueCount').innerText = playlist.length;
     document.getElementById('drawerCount').innerText = playlist.length;
@@ -368,18 +439,24 @@
     }
 
     // ================= REALTIME LISTENER PRESENCE =================
+    function getFirebaseConfig() {
+      return window.firebaseConfig || window.firebaseConfig || firebaseConfig || {};
+    }
+
     const firebaseReady = !!(
       window.firebase &&
-      firebaseConfig.apiKey &&
-      firebaseConfig.apiKey !== "YOUR_API_KEY_HERE" &&
-      firebaseConfig.databaseURL &&
-      firebaseConfig.databaseURL !== "https://YOUR-PROJECT-default-rtdb.firebaseio.com"
+      getFirebaseConfig().apiKey &&
+      getFirebaseConfig().apiKey !== "YOUR_API_KEY_HERE" &&
+      getFirebaseConfig().apiKey !== "AIzaSyDummyKey" &&
+      getFirebaseConfig().databaseURL &&
+      getFirebaseConfig().databaseURL !== "https://YOUR-PROJECT-default-rtdb.firebaseio.com"
     );
 
     function initRealtimePresence() {
       try {
-        if (firebaseReady) {
-          firebase.initializeApp(firebaseConfig);
+        const config = getFirebaseConfig();
+        if (firebaseReady && config && config.apiKey) {
+          firebase.initializeApp(config);
           const db = firebase.database();
           const listRef = db.ref("live_listeners");
           const userRef = listRef.push();
@@ -408,7 +485,13 @@
 
     // YouTube API Setup
     function onYouTubeIframeAPIReady() {
+      const isLocalHost = window.location.protocol === 'http:' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      if (isLocalHost) {
+        document.getElementById('playerStatus').innerText = 'HTTPS domain required for YouTube playback';
+      }
+
       player = new YT.Player('yt-player', {
+        host: 'https://www.youtube-nocookie.com',
         height: '200',
         width: '200',
         videoId: playlist[currentTrack].id,
@@ -417,10 +500,12 @@
           controls: 0,
           rel: 0,
           listType: 'playlist',
-          list: playlistId
+          list: playlistId,
+          origin: window.location.origin
         },
         events: {
           onReady: () => {
+            keepBackgroundPlaying();
             document.getElementById('playerStatus').innerText = "Ready";
             player.setVolume(80);
             player.loadPlaylist({
@@ -432,8 +517,11 @@
           },
           onStateChange: onPlayerStateChange,
           onError: () => {
-            console.warn("Skipping restricted video...");
-            nextTrack();
+            console.warn("YouTube player blocked this track. This usually happens on localhost or restricted videos.");
+            document.getElementById('playerStatus').innerText = 'Playback blocked by YouTube on localhost';
+            if (!window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
+              nextTrack();
+            }
           }
         }
       });
@@ -490,6 +578,7 @@
     }
 
     function nextTrack() {
+      resumeBackgroundOnUserAction();
       if (player && player.nextVideo) {
         player.nextVideo();
         currentTrack = (currentTrack + 1) % playlist.length;
@@ -506,6 +595,7 @@
     }
 
     function prevTrack() {
+      resumeBackgroundOnUserAction();
       if (player && player.previousVideo) {
         player.previousVideo();
         currentTrack = (currentTrack - 1 + playlist.length) % playlist.length;
@@ -518,6 +608,7 @@
     }
 
     function selectTrack(idx) {
+      resumeBackgroundOnUserAction();
       currentTrack = idx;
       if (player && player.playVideoAt) {
         player.playVideoAt(idx);
@@ -529,6 +620,7 @@
     }
 
     function loadTrack() {
+      resumeBackgroundOnUserAction();
       updateUI();
       if (player && player.loadPlaylist) {
         player.loadPlaylist({
