@@ -1,0 +1,14 @@
+# Firebase / local config secrets
+.env
+.env.local
+.env.*
+firebase-config.js
+firebase-config.json
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Logs
+*.log
