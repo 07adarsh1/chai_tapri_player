@@ -9,6 +9,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
+  <!-- Firebase App & Realtime Database SDKs for Real-Time Presence -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
   <style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
     .mono { font-family: 'Space Mono', monospace; }
@@ -16,29 +20,6 @@
     /* Custom range slider thumb */
     input[type="range"] {
       accent-color: #fbbf24;
-    }
-
-    .volume-wrap {
-      position: relative;
-      display: inline-flex;
-      align-items: center;
-    }
-
-    .volume-wrap .volume-panel {
-      opacity: 0;
-      visibility: hidden;
-      transform: translateY(8px);
-      pointer-events: none;
-      transition: all 0.18s ease;
-    }
-
-    .volume-wrap:hover .volume-panel,
-    .volume-wrap:focus-within .volume-panel,
-    .volume-wrap.is-open .volume-panel {
-      opacity: 1;
-      visibility: visible;
-      transform: translateY(0);
-      pointer-events: auto;
     }
 
     /* Equalizer Waveform */
@@ -51,32 +32,11 @@
     .eq-2 { animation-delay: 0.35s; }
     .eq-3 { animation-delay: 0.15s; }
     .eq-4 { animation-delay: 0.45s; }
-
-    /* Playlist scrollbar matching the site theme */
-    #playlistItems {
-      scrollbar-width: thin;
-      scrollbar-color: rgba(251, 191, 36, 0.9) rgba(255, 255, 255, 0.05);
-    }
-    #playlistItems::-webkit-scrollbar {
-      width: 10px;
-    }
-    #playlistItems::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.04);
-      border-radius: 999px;
-    }
-    #playlistItems::-webkit-scrollbar-thumb {
-      background: linear-gradient(180deg, rgba(251,191,36,0.95), rgba(217,119,6,0.9));
-      border-radius: 999px;
-      border: 2px solid rgba(15, 23, 42, 0.9);
-    }
-    #playlistItems::-webkit-scrollbar-thumb:hover {
-      background: linear-gradient(180deg, rgba(252,211,77,1), rgba(245,158,11,0.95));
-    }
   </style>
 </head>
 <body class="relative h-full text-white flex flex-col justify-between items-center p-4 sm:p-6 select-none overflow-hidden bg-black">
 
-  <!-- 1. ORIGINAL FULLSCREEN AUTOPLAY VIDEO BACKGROUND -->
+  <!-- 1. FULLSCREEN VIDEO BACKGROUND -->
   <div class="fixed inset-0 -z-30 overflow-hidden">
     <video
       id="bgVideo"
@@ -95,9 +55,10 @@
 
   <!-- 3. TOP STATUS BAR -->
   <header class="w-full max-w-5xl flex justify-between items-center text-xs z-10 pt-1">
-    <div class="flex items-center gap-2 bg-neutral-950/75 border border-white/10 px-3.5 py-1.5 rounded-full backdrop-blur-md shadow-lg">
+    <!-- Real-time Live Counter -->
+    <div class="flex items-center gap-2 bg-neutral-950/75 border border-white/10 px-3.5 py-1.5 rounded-full backdrop-blur-md shadow-lg self-start">
       <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-      <span class="mono text-neutral-200 text-[11px]"><span id="liveCount">164</span> listening right now</span>
+      <span class="mono text-neutral-200 text-[11px]"><span id="liveCount">1</span> listening right now</span>
     </div>
 
     <!-- Playlist Button -->
@@ -114,7 +75,7 @@
     </button>
   </header>
 
-  <!-- Empty center space so video background remains unobstructed -->
+  <!-- Empty center space -->
   <div class="flex-1 pointer-events-none"></div>
 
   <!-- 4. BOTTOM FLOATING DOCK PLAYER -->
@@ -164,7 +125,7 @@
         </div>
       </div>
 
-      <!-- Playback & Accessible Volume Controls -->
+      <!-- Playback & Fixed Volume Controls Row -->
       <div class="flex items-center justify-between pt-1">
         
         <!-- Left: Shuffle & Loop -->
@@ -213,9 +174,9 @@
           </button>
         </div>
 
-        <!-- Right: Volume appears on hover -->
-        <div class="volume-wrap relative flex items-center">
-          <button onclick="toggleMute()" id="volBtn" class="text-neutral-400 hover:text-amber-300 transition p-2 rounded-xl" title="Mute/Unmute">
+        <!-- Right: FIXED VOLUME CONTROLLER (Stays open smoothly on hover & drag) -->
+        <div class="relative flex items-center group bg-white/5 border border-white/10 rounded-2xl px-2 py-1 transition-all duration-200">
+          <button onclick="toggleMute()" id="volBtn" class="p-1 text-neutral-400 group-hover:text-white hover:text-amber-300 transition flex-shrink-0" title="Mute/Unmute">
             <svg id="volIcon" class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
               <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
@@ -223,17 +184,16 @@
             </svg>
           </button>
 
-          <div class="volume-panel absolute right-0 bottom-full mb-2 z-20">
-            <div class="bg-neutral-900/95 border border-white/10 rounded-full px-3 py-2 shadow-xl backdrop-blur-md">
-              <input
-                type="range"
-                id="volumeSlider"
-                min="0"
-                max="100"
-                value="80"
-                oninput="changeVolume(this.value)"
-                class="w-20 h-1 bg-white/20 rounded-lg cursor-pointer appearance-none">
-            </div>
+          <!-- Smooth slider container (accessible via hover AND click/drag focus) -->
+          <div class="w-0 opacity-0 group-hover:w-16 group-hover:opacity-100 group-focus-within:w-16 group-focus-within:opacity-100 transition-all duration-300 ease-out flex items-center pl-1.5 overflow-hidden">
+            <input
+              type="range"
+              id="volumeSlider"
+              min="0"
+              max="100"
+              value="80"
+              oninput="changeVolume(this.value)"
+              class="w-14 h-1.5 bg-white/20 rounded-lg cursor-pointer appearance-none">
           </div>
         </div>
 
@@ -270,13 +230,7 @@
   </div>
 
   <!-- JAVASCRIPT -->
-  <script>
-    if (window.location.protocol !== 'file:') {
-      const ytScript = document.createElement('script');
-      ytScript.src = 'https://www.youtube.com/iframe_api';
-      document.head.appendChild(ytScript);
-    }
-  </script>
+  <script src="https://www.youtube.com/iframe_api"></script>
   <script>
     const playlist = [
       { id: "lSpst_vJFiw", title: "Pehla Nasha", artist: "Udit Narayan & Sadhana Sargam" },
@@ -371,7 +325,7 @@
       }
     }
 
-    // Volume Slider & Vector Icons
+    // Volume Slider & Icons
     function changeVolume(val) {
       if (!player || !player.setVolume) return;
       player.setVolume(val);
@@ -410,16 +364,51 @@
       }
     }
 
-    // Live Counter
-    function initListeners() {
-      let count = 164;
-      setInterval(() => {
-        const delta = Math.floor(Math.random() * 5) - 2;
-        count = Math.max(110, count + delta);
-        document.getElementById('liveCount').innerText = count;
-      }, 4000);
+    // ================= REALTIME LISTENER PRESENCE =================
+    const firebaseConfig = {
+      apiKey: "AIzaSyBiRBuZa7pJRDMh2itgX_OM0RsQMsHlecE",
+      authDomain: "chai-tapri-86c4d.firebaseapp.com",
+      databaseURL: "https://chai-tapri-86c4d-default-rtdb.firebaseio.com",
+      projectId: "chai-tapri-86c4d"
+    };
+
+    const firebaseReady = !!(
+      window.firebase &&
+      firebaseConfig.apiKey &&
+      firebaseConfig.apiKey !== "YOUR_API_KEY_HERE" &&
+      firebaseConfig.databaseURL &&
+      firebaseConfig.databaseURL !== "https://YOUR-PROJECT-default-rtdb.firebaseio.com"
+    );
+
+    function initRealtimePresence() {
+      try {
+        if (firebaseReady) {
+          firebase.initializeApp(firebaseConfig);
+          const db = firebase.database();
+          const listRef = db.ref("live_listeners");
+          const userRef = listRef.push();
+
+          db.ref(".info/connected").on("value", (snap) => {
+            if (snap.val() === true) {
+              userRef.onDisconnect().remove();
+              userRef.set(true);
+            }
+          });
+
+          listRef.on("value", (snap) => {
+            const count = Math.max(1, snap.numChildren() || 1);
+            document.getElementById("liveCount").innerText = count;
+          });
+          return;
+        }
+      } catch (e) {
+        console.log("Using local presence fallback:", e);
+      }
+
+      let count = 1;
+      document.getElementById("liveCount").innerText = count;
     }
-    initListeners();
+    initRealtimePresence();
 
     // YouTube API Setup
     function onYouTubeIframeAPIReady() {
@@ -445,35 +434,6 @@
           }
         }
       });
-    }
-
-    const volumeWrap = document.querySelector('.volume-wrap');
-    const volumeButton = document.getElementById('volBtn');
-    const volumeSlider = document.getElementById('volumeSlider');
-
-    function setVolumePopover(open) {
-      if (!volumeWrap) return;
-      volumeWrap.classList.toggle('is-open', open);
-    }
-
-    if (volumeWrap) {
-      volumeWrap.addEventListener('mouseenter', () => setVolumePopover(true));
-      volumeWrap.addEventListener('mouseleave', () => setVolumePopover(false));
-    }
-
-    if (volumeButton) {
-      volumeButton.addEventListener('focus', () => setVolumePopover(true));
-      volumeButton.addEventListener('blur', () => setVolumePopover(false));
-    }
-
-    if (volumeSlider) {
-      volumeSlider.addEventListener('pointerdown', () => setVolumePopover(true));
-      volumeSlider.addEventListener('blur', () => setVolumePopover(false));
-    }
-
-    if (window.location.protocol === 'file:') {
-      const status = document.getElementById('playerStatus');
-      if (status) status.innerText = 'Serve via localhost';
     }
 
     function updateUI() {
